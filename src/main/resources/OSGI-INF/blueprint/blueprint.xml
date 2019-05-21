@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<blueprint xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.3.0"
+           xsi:schemaLocation="
+             http://www.osgi.org/xmlns/blueprint/v1.0.0 https://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
+             http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.3.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.3.0.xsd
+             ">
+    
+    <!-- cluster manager reference -->
+    <reference id="clusterManager" interface="org.apache.karaf.cellar.core.ClusterManager" availability="mandatory"/>
+    
+    <!-- config admin service reference -->
+    <reference id="configAdmin" interface="org.osgi.service.cm.ConfigurationAdmin" availability="mandatory" />
+    
+    <!-- event producer reference -->
+    <reference id="eventProducer" interface="org.apache.karaf.cellar.core.event.EventProducer" availability="mandatory" />
+    
+    <!-- command store reference -->
+    <reference id="commandStore" interface="org.apache.karaf.cellar.core.command.CommandStore" availability="mandatory" />
+    
+    <reference id="executionContext" interface="org.apache.karaf.cellar.core.command.ExecutionContext" availability="mandatory" />
+    
+    <bean id="nodeInfoMBean" class="mbean.infrastructure.EAINodeInfoMBean">
+        <argument ref="clusterManager" index="0" />
+        <argument ref="executionContext" index="1" />
+    </bean>
+    
+    <!-- expose the mbean for cluster operations -->
+    <service ref="nodeInfoMBean" auto-export="interfaces">
+        <service-properties>
+            <entry key="jmx.objectname" value="com.example.mbean:type=management,name=nodeInfo" />
+        </service-properties>
+    </service>
+    
+    <bean id="nodeInfoHandler" 
+          class="infrastructure.NodeInfoCommandHandler">
+        <property name="clusterManager" ref="clusterManager" />
+        <property name="configurationAdmin" ref="configAdmin" />
+        <property name="producer" ref="eventProducer" />
+    </bean>
+    
+    <service id="nodeInfoHandlerService" ref="nodeInfoHandler"
+            interface="org.apache.karaf.cellar.core.event.EventHandler">
+    </service>
+    
+    <bean id="nodeInfoResultHandler" 
+          class="infrastructure.NodeInfoResultHandler">
+        <property name="commandStore" ref="commandStore" />
+    </bean>
+    
+    <service id="nodeInfoResultHandlerService" ref="nodeInfoResultHandler"
+             interface="org.apache.karaf.cellar.core.event.EventHandler">
+    </service>
+</blueprint>
